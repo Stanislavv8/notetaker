@@ -2,7 +2,9 @@
 
 Как работает:
 - Звонок — когда микрофон взяло любое приложение (Teams, Zoom, Телемост, браузер…). Windows отмечает это в реестре
-  CapabilityAccessManager. Через 5 с после уведомления начинается запись; «Не записывать» — отменить.
+  CapabilityAccessManager. Запись начинается молча; уведомление — только когда она дольше минуты.
+  Так голосовое в мессенджере или диктовка не превращаются во встречу: короче минуты — удаляется без следа.
+  «Не записывать» в трее или в окне — отменить.
 - Пишет две дорожки: микрофон (левый канал, «Я») и звук компьютера через WASAPI loopback (правый, «Собеседник»).
   Чтобы loopback не замолкал в тишине, в динамики играет беззвучный поток.
 - Конец — микрофон отпущен 15 с или 5 мин тишины на обеих дорожках. Короче минуты — не сохраняется.
@@ -13,14 +15,14 @@ import argparse, ctypes, datetime, functools, json, os, queue, shutil, subproces
 
 from .paths import APP_DIR, BUNDLE_DIR, DATA_DIR, FROZEN, MEETINGS_DIR
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 LOG, HISTORY, SETTINGS = (os.path.join(DATA_DIR, f) for f in ("notetaker.log", "history.json", "settings.json"))
 STARTUP_LNK = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs\Startup", "Notetaker.lnk")
 START_MENU_LNK = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs", "Notetaker.lnk")
 PORT = 47812  # второй запуск стучится сюда, чтобы показать окно первого
 MIC_KEY = r"Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone"
 EXCLUDE = ("notetaker", "python")  # сам Notetaker (и он же при запуске из исходников)
-POLL, CALL_AFTER, COUNTDOWN, RELEASE_STOP, SILENCE_STOP, MIN_LEN = 3, 6, 5, 15, 300, 60
+POLL, CALL_AFTER, RELEASE_STOP, SILENCE_STOP, MIN_LEN = 3, 6, 15, 300, 60
 SILENCE_RMS = 60  # int16; ниже — тишина
 RATE = 48000  # дорожки пишутся моно 48 кГц
 QUIET_WARN = 60  # с: дорожка молчит, а другая звучит — предупредить в окне
@@ -258,6 +260,7 @@ class App:
         start_menu_shortcut()
         self.state, self.rec, self.folder, self.app_name, self.started = "idle", None, None, "", None
         self.cancelled, self.seen, self.hidden, self.manual = False, set(), hidden, False
+        self.announced = False  # сказали ли уведомлением, что пишем встречу (автозапись — только после минуты)
         self.monitor, self.monitor_retry = None, 0.0  # Capture без записи — для шкал, пока окно открыто
         self.jobs = queue.Queue()
         self.finishing = threading.Lock()  # остановку запускают и кнопка, и детектор — одновременно не должны
@@ -375,6 +378,8 @@ class App:
         if self.state == "recording":
             sec = int((datetime.datetime.now() - self.started).total_seconds())
             sub = f"Идёт {sec // 60}:{sec % 60:02d}, " + ("остановите кнопкой" if self.manual else "остановлю сам после звонка")
+            if not self.announced:
+                sub = f"Идёт {sec // 60}:{sec % 60:02d}; если это не встреча (голосовое, диктовка) — запись короче минуты удалится сама"
         if self.jobs.qsize() or self.processing:
             sub += ("; " if sub else "") + "расшифровываю прошлую встречу"
         self.dot.delete("all")
@@ -524,7 +529,7 @@ class App:
         if self.state == "recording":
             threading.Thread(target=self.finish, args=("вручную",), daemon=True).start()
         elif self.state == "idle":
-            threading.Thread(target=self.begin, args=("вручную", False), daemon=True).start()
+            threading.Thread(target=self.begin, args=("вручную", True), daemon=True).start()
 
     def toggle_auto(self):
         self.settings["auto"] = self.auto_var.get()
@@ -547,18 +552,15 @@ class App:
         if self.state == "recording":
             threading.Thread(target=self.finish, args=("отменено",), daemon=True).start()
 
-    def begin(self, app_name, countdown=True):
+    def begin(self, app_name, manual=False):
+        """Автозапись начинается молча: микрофон берут и для голосовых в мессенджерах, и для диктовки.
+        Встреча это или нет, станет ясно через минуту — тогда announce(); короче минуты запись удалится сама."""
         with self.finishing:
             if self.state != "idle":  # кнопку нажали, пока детектор уже начал (или наоборот)
                 return
             self.state, self.app_name, self.cancelled = "countdown", app_name, False
-        self.manual = not countdown  # ручную запись (переговорка без звонка) не останавливаем по микрофону
-        self.tray("yellow", f"начну запись: {app_name}")
-        if countdown:
-            self.icon.notify(f"Через {COUNTDOWN} с начну записывать встречу ({app_name}). "
-                             "Не записывать — щёлкните по значку в трее.", "Notetaker")
-            time.sleep(COUNTDOWN)
-            self.icon.remove_notification()
+        self.manual = manual  # ручную запись (переговорка без звонка) не останавливаем по микрофону
+        self.announced = False
         if self.cancelled:
             log(f"отменено до записи: {app_name}")
             self.state = "idle"
@@ -580,11 +582,19 @@ class App:
             return
         self.state = "recording"
         self.tray("red", f"пишу {app_name}")
-        self.icon.notify(f"Пишу встречу ({app_name}). " + ("Остановите кнопкой в окне." if self.manual
-                         else "Остановлю сам, когда звонок закончится."), "Notetaker")
         log(f"запись: {app_name} → {self.folder}")
+        if manual:
+            self.announce()
 
-    def finish(self, why):
+    def announce(self):
+        self.announced = True
+        self.icon.notify(f"Пишу встречу ({self.app_name}). " + ("Остановите кнопкой в окне." if self.manual else
+                         "Остановлю сам, когда звонок закончится. Не записывать — щёлкните по значку в трее."),
+                         "Notetaker")
+
+    def finish(self, why, until=None):
+        """until — когда микрофон отпустили (time.time()): длину встречи считаем до него, а не до остановки
+        через RELEASE_STOP, иначе голосовое на 50 с с хвостом ожидания стало бы «встречей» длиннее минуты."""
         with self.finishing:
             if self.state != "recording":
                 return
@@ -594,7 +604,8 @@ class App:
             rec.stop()
         except Exception as e:
             log(f"остановка записи: {e!r}")
-        sec = (datetime.datetime.now() - started).total_seconds()
+        sec = (datetime.datetime.fromtimestamp(until) if until else datetime.datetime.now()) - started
+        sec = sec.total_seconds()
         log(f"стоп ({why}), {sec:.0f} с")
         if cancelled or sec < MIN_LEN:
             shutil.rmtree(folder, ignore_errors=True)
@@ -635,9 +646,11 @@ class App:
             elif self.state == "recording":
                 released = None if held or self.manual else (released or now)
                 if released and now - released >= RELEASE_STOP:
-                    self.finish("микрофон отпущен")
+                    self.finish("микрофон отпущен", released)
                 elif now - self.rec.last_sound >= SILENCE_STOP:
                     self.finish("тишина")
+                elif not self.announced and (datetime.datetime.now() - self.started).total_seconds() >= MIN_LEN:
+                    self.announce()  # дольше минуты — это встреча, а не голосовое
                 if self.state == "idle":
                     released = None
 

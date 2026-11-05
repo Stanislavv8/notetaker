@@ -5,9 +5,9 @@
 Всё пишется во временную папку: настоящие встречи и настройки не трогаются.
 
 Критерии приёмки:
- 1. Звонок начался → уведомление, через паузу запись, уведомление «Пишу».
+ 1. Звонок начался → запись молча; уведомление «Пишу встречу», только когда запись дольше минуты.
  2. Звонок закончился → запись останавливается сама, встреча в списке, есть встреча.ogg и расшифровка.md.
- 3. «Не записывать» во время паузы → записи нет, этот же звонок больше не подхватывается.
+ 3. Голосовое в мессенджере или диктовка (микрофон занят меньше минуты) → ни уведомлений, ни встречи.
  4. «Не записывать» во время записи → файлы удалены, в списке ничего.
  5. Запись короче минуты не сохраняется.
  6. Ручной старт и стоп кнопкой; ручная запись не останавливается сама (переговорка без звонка);
@@ -36,7 +36,7 @@ n.LOG, n.HISTORY, n.SETTINGS = (os.path.join(n.DATA_DIR, f) for f in ("log.txt",
 n.STARTUP_LNK = os.path.join(TMP, "Notetaker.lnk")
 n.start_menu_shortcut = lambda: None  # настоящий ярлык в «Пуске» тест не трогает
 n.PORT = 47898
-n.POLL, n.CALL_AFTER, n.COUNTDOWN, n.RELEASE_STOP, n.MIN_LEN = 0.2, 0.4, 0.6, 0.8, 2
+n.POLL, n.CALL_AFTER, n.RELEASE_STOP, n.MIN_LEN = 0.2, 0.4, 0.8, 2
 
 mic = {}  # имитация реестра «кто держит микрофон»
 n.mic_users = lambda: dict(mic)
@@ -153,14 +153,13 @@ def state(app, btn):
 
 # ---------------- сценарии ----------------
 
-@case(1, "звонок начался → пауза с уведомлением → запись")
+@case(1, "звонок начался → запись молча, уведомление — когда запись дольше минуты")
 def t_auto_start(app):
     app.icon.notes.clear()
     call("teams.exe", "Teams", 1)
-    wait(lambda: app.state == "countdown", 3, "паузы перед записью")
-    wait(lambda: any("Через" in x for x in app.icon.notes), 1, "уведомления перед записью")
     wait(lambda: app.state == "recording", 3, "начала записи")
-    check(any("Пишу встречу" in x for x in app.icon.notes), "нет уведомления о начале записи")
+    check(not app.icon.notes, f"уведомление до минуты записи (мешает при голосовых): {app.icon.notes}")
+    wait(lambda: any("Пишу встречу" in x for x in app.icon.notes), n.MIN_LEN + 2, "уведомления после минуты записи")
 
 
 @case(2, "звонок закончился → запись остановилась сама, встреча в списке")
@@ -180,17 +179,19 @@ def t_auto_stop(app):
     check(info.channels == 2 and info.duration > 2, f"встреча.ogg битый: {info.channels} кан., {info.duration:.1f} с")
 
 
-@case(3, "«Не записывать» во время паузы")
-def t_cancel_countdown(app):
-    n_before = len(os.listdir(n.MEETINGS_DIR))
-    call("telegram.exe", "Telegram", 2)
-    wait(lambda: app.state == "countdown", 3, "паузы")
-    ui(app, app.cancel)
-    wait(lambda: app.state == "idle", 3, "отмены")
-    time.sleep(1.5)
-    check(app.state == "idle", "отменённый звонок подхватился снова")
-    check(len(os.listdir(n.MEETINGS_DIR)) == n_before, "после отмены осталась папка записи")
+@case(3, "голосовое в мессенджере — не встреча: ни уведомлений, ни записи")
+def t_voice_note(app):
+    n_before, before = len(os.listdir(n.MEETINGS_DIR)), len(app.history)
+    app.icon.notes.clear()
+    call("telegram.exe", "Telegram", 2)  # держит микрофон, пока надиктовывают голосовое
+    wait(lambda: app.state == "recording", 3, "начала записи")
+    time.sleep(n.MIN_LEN * 0.5)
     hang_up("telegram.exe")
+    wait(lambda: app.state == "idle", 5, "остановки после голосового")
+    time.sleep(1)
+    check(not app.icon.notes, f"голосовое вызвало уведомления: {app.icon.notes}")
+    check(len(os.listdir(n.MEETINGS_DIR)) == n_before and len(app.history) == before, "голосовое осталось встречей")
+    check(app.state == "idle", "тот же звонок подхватился снова")
 
 
 @case(4, "«Не записывать» во время записи")
@@ -473,7 +474,7 @@ def stop_app(app):
 
 
 def run_all():
-    cases = [t_auto_start, t_auto_stop, t_cancel_countdown, t_cancel_recording, t_short, t_manual, t_switch,
+    cases = [t_auto_start, t_auto_stop, t_voice_note, t_cancel_recording, t_short, t_manual, t_switch,
              t_switch_sync, t_switch_at_stop, t_hop, t_auto_off, t_meters, t_second_instance, t_processing, t_startup,
              t_quit_recording]
     app = start_app()
