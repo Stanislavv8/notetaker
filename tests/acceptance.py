@@ -559,6 +559,8 @@ def run_all():
                     pass
         if app.closed:
             break
+    # фоновая обработка старого окна не должна писать историю, когда сценарий 10 подкладывает свою
+    wait(lambda: app.closed or (not app.processing and not app.jobs.qsize()), 60, "конца обработки перед сценарием 10")
     stop_app(app)
     recovery_case()
 
