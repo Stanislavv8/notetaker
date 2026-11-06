@@ -23,6 +23,8 @@
     где нужны; «Скопировать для выжимки» кладёт в буфер промт и расшифровку.
 15. Флажок автозапуска создаёт и удаляет ярлык.
 16. Смена устройства в момент остановки записи не ломает звук для следующих записей.
+18. Файл на расшифровку (m4a, mp3, mp4, wav): кнопкой и запуском программы с файлом; исходник цел; голоса —
+    «Спикер N», а не по каналам; «Расшифровать заново» работает; битый файл → понятная ошибка.
 """
 import os, queue, shutil, socket, sys, tempfile, threading, time, traceback, wave
 
@@ -44,9 +46,13 @@ fail_transcribe = []
 progress_seen = []
 
 
-def fake_transcription(src, out, title, progress):
-    """Расшифровка-заглушка: ход, как у настоящей, и файл."""
+transcribed = []  # (запись, по каналам ли)
+
+
+def fake_transcription(src, out, title, progress, channels=True):
+    """Расшифровка-заглушка: ход, как у настоящей, и файл. Чтение файлов пользователя (convert) — настоящее."""
     check(os.path.getsize(src) > 0, "пустой встреча.ogg")
+    transcribed.append((src, channels))
     for step in ("расшифровка 50%", "различаю голоса"):
         progress(step)
     if fail_transcribe:
@@ -380,6 +386,59 @@ def t_processing(app):
           and state(app, app.open_btn) == "disabled", "кнопки доступны без выбранной встречи")
 
 
+def make_file(path, seconds=3):
+    """Запись «с диктофона»: настоящий файл нужного формата, кодирует FFmpeg (PyAV)."""
+    import av, numpy as np
+    fmt = {".m4a": ("ipod", "aac"), ".mp3": ("mp3", "mp3"), ".mp4": ("mp4", "aac"), ".wav": ("wav", "pcm_s16le")}
+    container, codec = fmt[os.path.splitext(path)[1]]
+    with av.open(path, "w", format=container) as f:
+        st = f.add_stream(codec, rate=44100, layout="mono")
+        t = np.arange(44100 * seconds) / 44100
+        x = (0.2 * np.sin(2 * np.pi * 300 * t)).astype(np.float32)
+        for k in range(0, len(x), 1024):
+            fr = av.AudioFrame.from_ndarray(x[None, k:k + 1024], format="flt", layout="mono")
+            fr.sample_rate = 44100
+            for pkt in st.encode(fr):
+                f.mux(pkt)
+        for pkt in st.encode(None):
+            f.mux(pkt)
+
+
+@case(18, "файл на расшифровку: m4a, mp3, mp4, wav — кнопкой и через второй запуск")
+def t_import(app):
+    src = os.path.join(TMP, "диктофон")
+    os.makedirs(src)
+    files = [os.path.join(src, f"Встреча {ext[1:]}{ext}") for ext in (".m4a", ".mp3", ".mp4", ".wav")]
+    for f in files:
+        make_file(f)
+    before = len(app.history)
+    ui(app, lambda: app.import_files(files[:3]))
+    with socket.create_connection(("127.0.0.1", n.PORT), timeout=2) as c:  # как «Открыть с помощью» при запущенном
+        c.sendall(files[3].encode("utf-8"))
+    wait(lambda: len(app.history) == before + 4, 5, "всех файлов в списке")
+    new = app.history[before:]
+    wait(lambda: all(h["status"] == "расшифровка готова" for h in new), 60, f"расшифровки файлов: {[h['status'] for h in new]}")
+    for h in new:
+        check(os.path.exists(os.path.join(h["folder"], n.AUDIO)), f"нет встреча.ogg для {h['when']}")
+        check(h["mins"] == 0, f"длина файла не посчитана: {h['mins']}")
+        check(os.path.exists(h["source"]), "исходный файл пользователя пропал")
+    check(all(not ch for s, ch in transcribed[-4:]), "файл расшифрован как запись Notetaker'а (по каналам «я / собеседники»)")
+    import soundfile as sf
+    check(sf.info(os.path.join(new[0]["folder"], n.AUDIO)).duration > 2.5, "встреча.ogg из m4a короче исходника")
+    wait(lambda: ui(app, lambda: app.tree.get_children()[0]) == str(len(app.history) - 1), 2, "последнего файла сверху списка")
+    i = before
+    select(app, i)
+    check(state(app, app.retry_btn) == "normal", "у файла недоступна «Расшифровать заново»")
+    os.remove(os.path.join(new[0]["folder"], n.AUDIO))  # даже без копии — из исходника
+    ui(app, app.retranscribe)
+    wait(lambda: app.history[i]["status"] == "расшифровка готова", 30, "повторной расшифровки файла")
+    bad = os.path.join(src, "битый.m4a")
+    with open(bad, "wb") as f:
+        f.write(b"not audio")
+    ui(app, lambda: app.import_files([bad]))
+    wait(lambda: app.history[-1]["status"].startswith("ошибка"), 20, "ошибки на битом файле")
+
+
 @case(15, "флажок автозапуска")
 def t_startup(app):
     ui(app, lambda: (app.startup_var.set(True), app.toggle_startup()))
@@ -480,7 +539,7 @@ def stop_app(app):
 
 def run_all():
     cases = [t_auto_start, t_auto_stop, t_voice_note, t_cancel_recording, t_short, t_manual, t_switch,
-             t_switch_sync, t_switch_at_stop, t_hop, t_auto_off, t_meters, t_second_instance, t_processing, t_startup,
+             t_switch_sync, t_switch_at_stop, t_hop, t_auto_off, t_meters, t_second_instance, t_processing, t_import, t_startup,
              t_quit_recording]
     app = start_app()
     for c in cases:

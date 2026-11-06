@@ -1,0 +1,285 @@
+> C:\Projects\notetaker\.venv\Scripts\python.exe scripts\make_icon.py C:\Projects\notetaker\packaging\notetaker.ico
+C:\Projects\notetaker\packaging\notetaker.ico
+> C:\Projects\notetaker\.venv\Scripts\python.exe -m PyInstaller C:\Projects\notetaker\packaging\notetaker.spec --noconfirm --clean --distpath build/dist --workpath build/work
+280 INFO: PyInstaller: 6.22.3, contrib hooks: 2026.9
+280 INFO: Python: 3.11.15
+292 INFO: Platform: Windows-10-10.0.26200-SP0
+292 INFO: Python environment: C:\Projects\notetaker\.venv
+299 INFO: Removing temporary files and cleaning cache in C:\Users\stanislav.stepanov\AppData\Local\pyinstaller
+697 WARNING: Failed to collect submodules for 'onnxruntime.quantization' because importing 'onnxruntime.quantization' raised: ModuleNotFoundError: No module named 'onnx'
+5618 INFO: Module search paths (PYTHONPATH):
+['C:\\Projects\\notetaker',
+ 'C:\\Users\\stanislav.stepanov\\AppData\\Roaming\\uv\\python\\cpython-3.11.15-windows-x86_64-none\\python311.zip',
+ 'C:\\Users\\stanislav.stepanov\\AppData\\Roaming\\uv\\python\\cpython-3.11.15-windows-x86_64-none\\DLLs',
+ 'C:\\Users\\stanislav.stepanov\\AppData\\Roaming\\uv\\python\\cpython-3.11.15-windows-x86_64-none\\Lib',
+ 'C:\\Users\\stanislav.stepanov\\AppData\\Roaming\\uv\\python\\cpython-3.11.15-windows-x86_64-none',
+ 'C:\\Projects\\notetaker\\.venv',
+ 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages',
+ 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\win32',
+ 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\win32\\lib',
+ 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\pythonwin',
+ 'C:\\Projects\\notetaker\\scripts',
+ 'C:\\Projects\\notetaker']
+6285 INFO: Appending 'binaries' from .spec
+6287 INFO: Appending 'datas' from .spec
+6365 INFO: checking Analysis
+6367 INFO: Building Analysis because Analysis-00.toc is non existent
+6367 INFO: Looking for Python shared library...
+6367 INFO: Using Python shared library: C:\Users\stanislav.stepanov\AppData\Roaming\uv\python\cpython-3.11.15-windows-x86_64-none\python311.dll
+6367 INFO: Running Analysis Analysis-00.toc
+6367 INFO: Target bytecode optimization level: 0
+6367 INFO: Initializing module dependency graph...
+6371 INFO: Initializing module graph hook caches...
+6394 INFO: Analyzing modules for base_library.zip ...
+7981 INFO: Processing standard module hook 'hook-heapq.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+8061 INFO: Processing standard module hook 'hook-encodings.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+10016 INFO: Processing standard module hook 'hook-math.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+10243 INFO: Processing standard module hook 'hook-pickle.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+11789 INFO: Caching module dependency graph...
+11829 INFO: Analyzing C:\Projects\notetaker\scripts\launcher.py
+11897 INFO: Processing standard module hook 'hook-_ctypes.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+11983 INFO: Processing standard module hook 'hook-numpy.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+12343 INFO: Processing pre-safe-import-module hook 'hook-typing_extensions.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+12346 INFO: SetuptoolsInfo: initializing cached setuptools info...
+17267 INFO: Processing standard module hook 'hook-multiprocessing.util.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+17423 INFO: Processing standard module hook 'hook-xml.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+18463 INFO: Processing standard module hook 'hook-difflib.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+18970 INFO: Processing standard module hook 'hook-sysconfig.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+19056 INFO: Processing standard module hook 'hook-platform.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+19589 INFO: Processing standard module hook 'hook-webbrowser.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+21374 INFO: Processing standard module hook 'hook-soundfile.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+21479 INFO: Processing standard module hook 'hook-av.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+22585 INFO: Processing standard module hook 'hook-PIL.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+22847 INFO: Processing standard module hook 'hook-PIL.Image.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+23583 INFO: Processing standard module hook 'hook-xml.etree.cElementTree.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+23842 INFO: Processing standard module hook 'hook-PIL.ImageFilter.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+24356 INFO: Processing standard module hook 'hook-onnxruntime.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+24465 INFO: Processing pre-safe-import-module hook 'hook-tensorflow.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\pre_safe_import_module'
+24664 INFO: Processing standard module hook 'hook-pystray.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+25247 INFO: Processing pre-safe-import-module hook 'hook-six.moves.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+25359 INFO: Processing pre-safe-import-module hook 'hook-gi.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+25423 INFO: Processing pre-find-module-path hook 'hook-tkinter.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_find_module_path'
+25426 INFO: TclTkInfo: initializing cached Tcl/Tk info...
+26050 INFO: Processing standard module hook 'hook-_tkinter.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+26267 INFO: Processing standard module hook 'hook-pythoncom.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+26442 INFO: Processing standard module hook 'hook-pywintypes.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+26601 INFO: Processing pre-safe-import-module hook 'hook-win32com.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\pre_safe_import_module'
+26755 INFO: Processing standard module hook 'hook-win32com.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+26800 INFO: Analyzing hidden import 'win32timezone'
+26840 INFO: Analyzing hidden import 'onnx_asr.cli'
+26843 INFO: Analyzing hidden import 'onnxruntime.capi.convert_npz_to_onnx_adapter'
+26845 INFO: Analyzing hidden import 'onnxruntime.datasets'
+26845 INFO: Analyzing hidden import 'onnxruntime.tools'
+26850 INFO: Analyzing hidden import 'onnxruntime.tools.check_onnx_model_mobile_usability'
+26879 INFO: Analyzing hidden import 'onnxruntime.tools.convert_onnx_models_to_ort'
+26915 INFO: Analyzing hidden import 'onnxruntime.tools.make_dynamic_shape_fixed'
+26918 INFO: Analyzing hidden import 'onnxruntime.tools.offline_tuning'
+26925 INFO: Analyzing hidden import 'onnxruntime.tools.onnx_randomizer'
+26928 INFO: Analyzing hidden import 'onnxruntime.tools.onnxruntime_test'
+26942 INFO: Analyzing hidden import 'onnxruntime.tools.optimize_onnx_model'
+26944 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py'
+26945 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs'
+26946 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.ArgType'
+26947 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.ArgTypeAndIndex'
+27010 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.Attribute'
+27024 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.AttributeType'
+27025 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.Checkpoint'
+27034 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.DeprecatedKernelCreateInfos'
+27040 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.DeprecatedNodeIndexAndKernelDefHash'
+27045 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.DeprecatedSessionState'
+27052 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.DeprecatedSubGraphSessionState'
+27055 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.Dimension'
+27060 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.DimensionValue'
+27063 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.DimensionValueType'
+27064 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.EdgeEnd'
+27068 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.FloatProperty'
+27072 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.Graph'
+27084 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.InferenceSession'
+27090 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.IntProperty'
+27094 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.KernelTypeStrArgsEntry'
+27099 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.KernelTypeStrResolver'
+27104 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.MapType'
+27107 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.Model'
+27119 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.ModuleState'
+27130 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.Node'
+27147 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.NodeEdge'
+27155 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.NodeType'
+27157 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.NodesToOptimizeIndices'
+27165 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.OpIdKernelTypeStrArgsEntry'
+27170 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.OperatorSetId'
+27174 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.OptimizerGroup'
+27179 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.ParameterOptimizerState'
+27189 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.PropertyBag'
+27199 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.RuntimeOptimizationRecord'
+27206 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.RuntimeOptimizationRecordContainerEntry'
+27214 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.RuntimeOptimizations'
+27219 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.SequenceType'
+27224 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.Shape'
+27230 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.SparseTensor'
+27239 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.StringProperty'
+27244 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.StringStringEntry'
+27250 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.Tensor'
+27264 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.TensorDataType'
+27265 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.TensorTypeAndShape'
+27271 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.TypeInfo'
+27280 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.TypeInfoValue'
+27281 INFO: Analyzing hidden import 'onnxruntime.tools.ort_format_model.ort_flatbuffers_py.fbs.ValueInfo'
+27287 INFO: Analyzing hidden import 'onnxruntime.tools.pytorch_export_contrib_ops'
+27295 INFO: Analyzing hidden import 'onnxruntime.tools.qdq_helpers'
+27296 INFO: Analyzing hidden import 'onnxruntime.tools.qdq_helpers.optimize_qdq_model'
+27299 INFO: Analyzing hidden import 'onnxruntime.tools.reduced_build_config_parser'
+27305 INFO: Analyzing hidden import 'onnxruntime.tools.remove_initializer_from_input'
+27307 INFO: Analyzing hidden import 'onnxruntime.tools.symbolic_shape_infer'
+27559 INFO: Processing pre-safe-import-module hook 'hook-packaging.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+27602 INFO: Analyzing hidden import 'onnxruntime.tools.update_onnx_opset'
+27604 INFO: Analyzing hidden import 'onnxruntime.transformers.affinity_helper'
+27606 INFO: Analyzing hidden import 'onnxruntime.transformers.benchmark'
+27637 INFO: Analyzing hidden import 'onnxruntime.transformers.benchmark_helper'
+27661 INFO: Analyzing hidden import 'onnxruntime.transformers.bert_perf_test'
+27681 INFO: Analyzing hidden import 'onnxruntime.transformers.bert_test_data'
+27696 INFO: Analyzing hidden import 'onnxruntime.transformers.compare_bert_results'
+27705 INFO: Analyzing hidden import 'onnxruntime.transformers.constants'
+27706 INFO: Analyzing hidden import 'onnxruntime.transformers.convert_generation'
+27909 INFO: Analyzing hidden import 'onnxruntime.transformers.convert_tf_models_to_pytorch'
+27921 INFO: Analyzing hidden import 'onnxruntime.transformers.convert_to_packing_mode'
+27972 INFO: Analyzing hidden import 'onnxruntime.transformers.dynamo_onnx_helper'
+27980 INFO: Analyzing hidden import 'onnxruntime.transformers.float16'
+27998 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_attention'
+28039 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_attention_clip'
+28050 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_attention_sam2'
+28064 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_attention_unet'
+28104 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_attention_vae'
+28114 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_bart_attention'
+28127 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_base'
+28135 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_bias_add'
+28137 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_biasgelu'
+28142 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_biassplitgelu'
+28147 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_conformer_attention'
+28156 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_constant_fold'
+28163 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_embedlayer'
+28192 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_fastgelu'
+28212 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_gelu'
+28224 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_gelu_approximation'
+28225 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_gemmfastgelu'
+28231 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_gpt_attention'
+28253 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_gpt_attention_megatron'
+28266 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_gpt_attention_no_past'
+28279 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_group_norm'
+28289 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_layernorm'
+28311 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_mha_dit'
+28330 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_mha_mmdit'
+28345 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_nhwc_conv'
+28350 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_options'
+28359 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_qordered_attention'
+28378 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_qordered_gelu'
+28382 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_qordered_layernorm'
+28387 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_qordered_matmul'
+28398 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_quickgelu'
+28402 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_reshape'
+28412 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_rotary_attention'
+28530 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_shape'
+28535 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_simplified_layernorm'
+28546 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_skip_group_norm'
+28558 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_skiplayernorm'
+28573 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_transpose'
+28581 INFO: Analyzing hidden import 'onnxruntime.transformers.fusion_utils'
+28595 INFO: Analyzing hidden import 'onnxruntime.transformers.huggingface_models'
+28598 INFO: Analyzing hidden import 'onnxruntime.transformers.import_utils'
+28600 INFO: Analyzing hidden import 'onnxruntime.transformers.io_binding_helper'
+28625 INFO: Analyzing hidden import 'onnxruntime.transformers.large_model_exporter'
+28647 INFO: Analyzing hidden import 'onnxruntime.transformers.metrics'
+28660 INFO: Analyzing hidden import 'onnxruntime.transformers.onnx_exporter'
+28695 INFO: Analyzing hidden import 'onnxruntime.transformers.onnx_model'
+28768 INFO: Analyzing hidden import 'onnxruntime.transformers.onnx_model_bart'
+28781 INFO: Analyzing hidden import 'onnxruntime.transformers.onnx_model_bert'
+28825 INFO: Analyzing hidden import 'onnxruntime.transformers.onnx_model_bert_keras'
+28851 INFO: Analyzing hidden import 'onnxruntime.transformers.onnx_model_bert_tf'
+28874 INFO: Analyzing hidden import 'onnxruntime.transformers.onnx_model_clip'
+28879 INFO: Analyzing hidden import 'onnxruntime.transformers.onnx_model_conformer'
+28884 INFO: Analyzing hidden import 'onnxruntime.transformers.onnx_model_gpt2'
+28891 INFO: Analyzing hidden import 'onnxruntime.transformers.onnx_model_mmdit'
+29047 INFO: Processing pre-safe-import-module hook 'hook-importlib_resources.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+29100 INFO: Analyzing hidden import 'onnxruntime.transformers.onnx_model_phi'
+29176 INFO: Analyzing hidden import 'onnxruntime.transformers.onnx_model_sam2'
+29182 INFO: Analyzing hidden import 'onnxruntime.transformers.onnx_model_t5'
+29210 INFO: Analyzing hidden import 'onnxruntime.transformers.onnx_model_tnlr'
+29222 INFO: Analyzing hidden import 'onnxruntime.transformers.onnx_model_unet'
+29247 INFO: Analyzing hidden import 'onnxruntime.transformers.onnx_model_vae'
+29254 INFO: Analyzing hidden import 'onnxruntime.transformers.onnx_utils'
+29256 INFO: Analyzing hidden import 'onnxruntime.transformers.optimizer'
+29295 INFO: Analyzing hidden import 'onnxruntime.transformers.past_helper'
+29304 INFO: Analyzing hidden import 'onnxruntime.transformers.profile_result_processor'
+29322 INFO: Analyzing hidden import 'onnxruntime.transformers.profiler'
+29333 INFO: Analyzing hidden import 'onnxruntime.transformers.quantize_helper'
+30174 INFO: Analyzing hidden import 'onnxruntime.transformers.shape_infer_helper'
+30185 INFO: Analyzing hidden import 'onnxruntime.transformers.shape_optimizer'
+30203 INFO: Analyzing hidden import 'onnxruntime.transformers.torch_onnx_export_helper'
+30205 INFO: Analyzing hidden import 'sherpa_onnx.__main__'
+30210 INFO: Analyzing hidden import 'sherpa_onnx.cli'
+30685 INFO: Analyzing hidden import 'pyaudiowpatch.__main__'
+30688 INFO: Analyzing hidden import 'av.__main__'
+30699 INFO: Analyzing hidden import 'av.audio.plane'
+30701 INFO: Analyzing hidden import 'av.buffer'
+30704 INFO: Analyzing hidden import 'av.container.pyio'
+30711 INFO: Analyzing hidden import 'av.container.streams'
+30716 INFO: Analyzing hidden import 'av.datasets'
+30721 INFO: Analyzing hidden import 'av.dictionary'
+30724 INFO: Analyzing hidden import 'av.filter'
+30738 INFO: Analyzing hidden import 'av.filter.context'
+30748 INFO: Analyzing hidden import 'av.filter.link'
+30755 INFO: Analyzing hidden import 'av.frame'
+30781 INFO: Analyzing hidden import 'av.index'
+30786 INFO: Analyzing hidden import 'av.opaque'
+30789 INFO: Analyzing hidden import 'av.plane'
+30790 INFO: Analyzing hidden import 'av.stream'
+30799 INFO: Analyzing hidden import 'av.subtitles.subtitle'
+30809 INFO: Analyzing hidden import 'av.utils'
+30812 INFO: Analyzing hidden import 'av.video.plane'
+30822 INFO: Analyzing hidden import 'av.video.reformatter'
+30832 INFO: Processing module hooks (post-graph stage)...
+31847 INFO: Processing standard module hook 'hook-PIL.SpiderImagePlugin.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+31962 INFO: Processing standard module hook 'hook-_tkinter.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks'
+31984 INFO: Performing binary vs. data reclassification (1578 entries)
+32458 INFO: Looking for ctypes DLLs
+32589 INFO: Analyzing run-time hooks ...
+32595 INFO: Including run-time hook 'pyi_rth_inspect.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+32597 INFO: Including run-time hook 'pyi_rth_pkgutil.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+32600 INFO: Including run-time hook 'pyi_rth_multiprocessing.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+32602 INFO: Including run-time hook 'pyi_rth_pywintypes.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\rthooks'
+32603 INFO: Including run-time hook 'pyi_rth_pythoncom.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\rthooks'
+32604 INFO: Including run-time hook 'pyi_rth__tkinter.py' from 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+32656 INFO: Creating base_library.zip...
+32678 INFO: Looking for dynamic libraries
+34513 INFO: Extra DLL search directories (AddDllDirectory): ['C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\numpy.libs', 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\av.libs']
+34513 INFO: Extra DLL search directories (PATH): []
+37493 WARNING: Library not found: could not resolve 'mfc140u.dll', dependency of 'C:\\Projects\\notetaker\\.venv\\Lib\\site-packages\\pythonwin\\win32ui.pyd'.
+37813 INFO: Warnings written to C:\Projects\notetaker\build\work\notetaker\warn-notetaker.txt
+37997 INFO: Graph cross-reference written to C:\Projects\notetaker\build\work\notetaker\xref-notetaker.html
+38123 INFO: checking PYZ
+38123 INFO: Building PYZ because PYZ-00.toc is non existent
+38123 INFO: Building PYZ (ZlibArchive) C:\Projects\notetaker\build\work\notetaker\PYZ-00.pyz
+39252 INFO: Building PYZ (ZlibArchive) C:\Projects\notetaker\build\work\notetaker\PYZ-00.pyz completed successfully.
+39284 INFO: checking PKG
+39284 INFO: Building PKG because PKG-00.toc is non existent
+39284 INFO: Building PKG (CArchive) Notetaker.pkg
+39327 INFO: Building PKG (CArchive) Notetaker.pkg completed successfully.
+39328 INFO: Bootloader C:\Projects\notetaker\.venv\Lib\site-packages\PyInstaller\bootloader\Windows-64bit-intel\runw.exe
+39328 INFO: checking EXE
+39328 INFO: Building EXE because EXE-00.toc is non existent
+39329 INFO: Building EXE from EXE-00.toc
+39329 INFO: Copying bootloader EXE to C:\Projects\notetaker\build\work\notetaker\Notetaker.exe
+39424 INFO: Copying icon to EXE
+39495 INFO: Copying version information to EXE
+39565 INFO: Copying 0 resources to EXE
+39565 INFO: Embedding manifest in EXE
+39620 INFO: Appending PKG archive to EXE
+39695 INFO: Fixing EXE headers
+40472 INFO: Building EXE from EXE-00.toc completed successfully.
+40494 INFO: checking COLLECT
+40495 INFO: Building COLLECT because COLLECT-00.toc is non existent
+40495 INFO: Removing dir C:\Projects\notetaker\build\dist\Notetaker
+41033 INFO: Building COLLECT COLLECT-00.toc
+44704 INFO: Building COLLECT COLLECT-00.toc completed successfully.
+44747 INFO: Build complete! The results are available in: C:\Projects\notetaker\build\dist
+готово: C:\Projects\notetaker\dist\Notetaker-1.1.0-portable.zip
+Inno Setup не найден — установщик не собран (winget install JRSoftware.InnoSetup)

@@ -39,6 +39,45 @@ Name: "{userprograms}\Notetaker"; Filename: "{app}\Notetaker.exe"; AppUserModelI
 Name: "{userdesktop}\Notetaker"; Filename: "{app}\Notetaker.exe"; AppUserModelID: "Notetaker.Desktop"; Tasks: desktopicon
 Name: "{userstartup}\Notetaker"; Filename: "{app}\Notetaker.exe"; Parameters: "--hidden"; AppUserModelID: "Notetaker.Desktop"; Tasks: startup
 
+[Registry]
+; «Открыть с помощью → Notetaker» для аудио и видео: файл уйдёт на расшифровку
+Root: HKCU; Subkey: "Software\Classes\Applications\Notetaker.exe"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "Notetaker — расшифровать"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Applications\Notetaker.exe\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\Notetaker.exe"" ""%1"""
+Root: HKCU; Subkey: "Software\Classes\Applications\Notetaker.exe\SupportedTypes"; ValueType: string; ValueName: ".m4a"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\Applications\Notetaker.exe\SupportedTypes"; ValueType: string; ValueName: ".mp3"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\Applications\Notetaker.exe\SupportedTypes"; ValueType: string; ValueName: ".wav"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\Applications\Notetaker.exe\SupportedTypes"; ValueType: string; ValueName: ".ogg"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\Applications\Notetaker.exe\SupportedTypes"; ValueType: string; ValueName: ".opus"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\Applications\Notetaker.exe\SupportedTypes"; ValueType: string; ValueName: ".oga"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\Applications\Notetaker.exe\SupportedTypes"; ValueType: string; ValueName: ".flac"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\Applications\Notetaker.exe\SupportedTypes"; ValueType: string; ValueName: ".aac"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\Applications\Notetaker.exe\SupportedTypes"; ValueType: string; ValueName: ".wma"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\Applications\Notetaker.exe\SupportedTypes"; ValueType: string; ValueName: ".amr"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\Applications\Notetaker.exe\SupportedTypes"; ValueType: string; ValueName: ".3gp"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\Applications\Notetaker.exe\SupportedTypes"; ValueType: string; ValueName: ".mp4"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\Applications\Notetaker.exe\SupportedTypes"; ValueType: string; ValueName: ".mov"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\Applications\Notetaker.exe\SupportedTypes"; ValueType: string; ValueName: ".mkv"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\Applications\Notetaker.exe\SupportedTypes"; ValueType: string; ValueName: ".webm"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\Applications\Notetaker.exe\SupportedTypes"; ValueType: string; ValueName: ".avi"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\Applications\Notetaker.exe\SupportedTypes"; ValueType: string; ValueName: ".wmv"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\.m4a\OpenWithList\Notetaker.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.mp3\OpenWithList\Notetaker.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.wav\OpenWithList\Notetaker.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.ogg\OpenWithList\Notetaker.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.opus\OpenWithList\Notetaker.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.oga\OpenWithList\Notetaker.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.flac\OpenWithList\Notetaker.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.aac\OpenWithList\Notetaker.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.wma\OpenWithList\Notetaker.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.amr\OpenWithList\Notetaker.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.3gp\OpenWithList\Notetaker.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.mp4\OpenWithList\Notetaker.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.mov\OpenWithList\Notetaker.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.mkv\OpenWithList\Notetaker.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.webm\OpenWithList\Notetaker.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.avi\OpenWithList\Notetaker.exe"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\.wmv\OpenWithList\Notetaker.exe"; Flags: uninsdeletekey
+
 [Run]
 Filename: "{app}\Notetaker.exe"; Description: "Запустить Notetaker"; Flags: nowait postinstall skipifsilent
 

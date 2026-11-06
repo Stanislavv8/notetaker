@@ -7,3 +7,4 @@ PyAudioWPatch==0.2.12.9
 pystray==0.19.5
 pillow==13.0.0
 pywin32==312
+av==18.1.0

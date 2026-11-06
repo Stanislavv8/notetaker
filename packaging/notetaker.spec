@@ -5,7 +5,7 @@ from PyInstaller.utils.hooks import collect_all, collect_data_files, collect_dyn
 
 ROOT = os.path.abspath(os.path.join(SPECPATH, ".."))
 datas, binaries, hidden = [], [], ["pystray._win32", "win32timezone"]
-for pkg in ("onnx_asr", "onnxruntime", "sherpa_onnx", "pyaudiowpatch", "_soundfile_data"):
+for pkg in ("onnx_asr", "onnxruntime", "sherpa_onnx", "pyaudiowpatch", "_soundfile_data", "av"):
     d, b, h = collect_all(pkg)
     datas += d
     binaries += b

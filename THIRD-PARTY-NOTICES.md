@@ -12,11 +12,12 @@
 | ONNX Runtime | движок моделей | MIT | https://github.com/microsoft/onnxruntime |
 | PyAudioWPatch, PortAudio | запись звука (WASAPI) | Apache-2.0, MIT | https://github.com/s0d3s/PyAudioWPatch |
 | soundfile, libsndfile, libopus | сжатие записи в Ogg Opus | BSD-3-Clause, LGPL-2.1, BSD-3-Clause | https://github.com/bastibe/python-soundfile, https://github.com/libsndfile/libsndfile |
+| PyAV, FFmpeg (с libx264, libx265, libmp3lame, libopus и др.) | чтение m4a, mp3, mp4 и других файлов | BSD-3-Clause; FFmpeg — LGPL-3.0, x264/x265 — GPL-2.0 | https://github.com/PyAV-Org/PyAV, https://ffmpeg.org, исходники сборки — https://github.com/PyAV-Org/pyav-ffmpeg |
 | pystray | значок в трее | LGPL-3.0 | https://github.com/moses-palmer/pystray |
 | NumPy | вычисления | BSD-3-Clause | https://numpy.org |
 | Pillow | значок | MIT-CMU | https://python-pillow.org |
 | pywin32 | ярлыки Windows | PSF | https://github.com/mhammond/pywin32 |
 | Python | среда выполнения | PSF | https://www.python.org |
 
-Для библиотек под LGPL (libsndfile, pystray): исходный код Notetaker открыт, сборка воспроизводится скриптом
+Для библиотек под LGPL и GPL (FFmpeg и его кодеки, libsndfile, pystray): исходный код Notetaker открыт, сборка воспроизводится скриптом
 `scripts/build.py`, поэтому их можно заменить своей версией и пересобрать программу.

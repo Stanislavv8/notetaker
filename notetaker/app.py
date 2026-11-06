@@ -15,7 +15,7 @@ import argparse, ctypes, datetime, functools, json, os, queue, shutil, subproces
 
 from .paths import APP_DIR, BUNDLE_DIR, DATA_DIR, FROZEN, MEETINGS_DIR
 
-__version__ = "1.0.2"
+__version__ = "1.1.0"
 LOG, HISTORY, SETTINGS = (os.path.join(DATA_DIR, f) for f in ("notetaker.log", "history.json", "settings.json"))
 STARTUP_LNK = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs\Startup", "Notetaker.lnk")
 START_MENU_LNK = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs", "Notetaker.lnk")
@@ -239,9 +239,28 @@ def pack_audio(folder):
     return out
 
 
-def run_transcription(src, out, title, progress):
+def run_transcription(src, out, title, progress, channels=True):
     from . import transcribe
-    return transcribe.transcribe(src, out, title, progress)
+    return transcribe.transcribe(src, out, title, progress, channels)
+
+
+def probe_seconds(path):
+    """Длина файла пользователя; не прочиталась — None (ошибку покажет обработка)."""
+    try:
+        import av
+        with av.open(path) as f:
+            return f.duration / 1e6 if f.duration else None
+    except Exception:
+        return None
+
+
+def convert_file(src, dst):
+    from . import transcribe
+    return transcribe.convert(src, dst)
+
+
+FILE_TYPES = ("*.m4a *.mp3 *.wav *.ogg *.opus *.oga *.flac *.aac *.wma *.amr *.3gp "
+              "*.mp4 *.mov *.mkv *.webm *.avi *.wmv")
 
 
 class App:
@@ -266,6 +285,7 @@ class App:
         self.finishing = threading.Lock()  # остановку запускают и кнопка, и детектор — одновременно не должны
         self.settings = {"auto": True, **load_json(SETTINGS, {})}
         self.history = load_json(HISTORY, [])
+        self.files = []  # записи, с которыми запустили программу
         self.flash = ("", 0.0)  # короткое сообщение под списком встреч и до какого времени его показывать
         self.root = tk.Tk()
         self.icon = pystray.Icon("notetaker", picture("grey"), "Notetaker", menu=pystray.Menu(
@@ -308,6 +328,8 @@ class App:
         btns.pack(fill="x", **pad)
         self.main_btn = ttk.Button(btns, command=self.main_action)
         self.main_btn.pack(side="left")
+        self.file_btn = ttk.Button(btns, text="Расшифровать файл…", command=self.pick_files)
+        self.file_btn.pack(side="right")
         self.cancel_btn = ttk.Button(btns, text="Не записывать", command=self.cancel)
 
         sound = ttk.LabelFrame(r, text="Звук")
@@ -403,7 +425,7 @@ class App:
             # сверху всегда самая свежая встреча; строки обновляем на месте и двигаем — выделение не сбрасывается
             # (раньше при запуске новые вставлялись по одной в начало, и после перезапуска свежие оказывались внизу)
             for pos, (i, h) in enumerate(reversed(list(enumerate(self.history)))):
-                values = (h["when"], f"{h['mins']} мин", h["status"])
+                values = (h["when"], f"{h['mins']} мин" if h.get("mins") is not None else "—", h["status"])
                 if self.tree.exists(str(i)):
                     self.tree.item(str(i), values=values)
                 else:
@@ -495,7 +517,7 @@ class App:
     def can_retranscribe(self, i):
         """Расшифровать заново можно, если звук на месте и встреча сейчас не в работе."""
         h = self.history[i] if i is not None else None
-        return bool(h and has_audio(h["folder"]) and not h["status"].endswith("…")
+        return bool(h and self.audio_there(h) and not h["status"].endswith("…")
                     and not h["status"].startswith("в очереди"))
 
     def retranscribe(self):
@@ -675,6 +697,41 @@ class App:
                 self.icon.notify(f"Не смог расшифровать встречу: {e}", "Notetaker")
             self.processing = False
 
+    @staticmethod
+    def audio_there(h):
+        """Есть из чего расшифровать: запись Notetaker'а или исходный файл пользователя."""
+        return has_audio(h["folder"]) or bool(h.get("source") and os.path.exists(h["source"]))
+
+    # --- файлы пользователя ---
+
+    def pick_files(self):
+        from tkinter import filedialog
+        paths = filedialog.askopenfilenames(parent=self.root, title="Какие записи расшифровать?",
+                                            filetypes=[("Аудио и видео", FILE_TYPES), ("Все файлы", "*.*")])
+        self.import_files(paths)
+
+    def import_files(self, paths):
+        """Файлы пользователя (m4a, mp3, mp4…) — в список встреч и в очередь. Исходник не трогаем: в папке встречи
+        будет его копия в встреча.ogg и расшифровка; дата встречи — время изменения файла."""
+        for path in paths:
+            if not os.path.isfile(path):
+                continue
+            sec = probe_seconds(path)  # файл сохраняют в конце записи: начало встречи = время файла минус длина
+            when = datetime.datetime.fromtimestamp(os.path.getmtime(path) - (sec or 0))
+            name = os.path.splitext(os.path.basename(path))[0]
+            safe = "".join(c for c in name if c not in '\\/:*?"<>|').strip()[:40] or "файл"
+            folder = unique(os.path.join(MEETINGS_DIR, f"{when:%Y-%m-%d %H.%M} {safe}"))
+            os.makedirs(folder)
+            with self.finishing:
+                self.history.append({"when": f"{when:%d.%m %H:%M} · {name[:30]}",
+                                     "mins": round(sec / 60) if sec is not None else None, "status": "в очереди",
+                                     "folder": folder, "source": os.path.abspath(path)})
+                save_json(HISTORY, self.history)
+                self.jobs.put(len(self.history) - 1)
+            log(f"файл на расшифровку: {path}")
+        if paths:
+            self.open_window()
+
     def process(self, i):
         h = self.history[i]
         folder = h["folder"]
@@ -682,10 +739,17 @@ class App:
             self.mark(i, "сжимаю звук…")
             pack_audio(folder)
         audio = os.path.join(folder, AUDIO)
+        if h.get("source") and not os.path.exists(audio):
+            if not os.path.exists(h["source"]):
+                raise RuntimeError(f"файла больше нет: {h['source']}")
+            self.mark(i, "читаю файл…")
+            h["mins"] = round(convert_file(h["source"], audio) / 60)
+            save_json(HISTORY, self.history)
         if not os.path.exists(audio):
             raise RuntimeError(f"нет звука в {folder}")
         t0 = time.time()
-        run_transcription(audio, os.path.join(folder, TRANSCRIPT), h["when"], lambda text: self.mark(i, text + "…"))
+        run_transcription(audio, os.path.join(folder, TRANSCRIPT), h["when"], lambda text: self.mark(i, text + "…"),
+                          channels=not h.get("source"))
         log(f"расшифровка {h['when']}: {time.time() - t0:.0f} с")
         self.mark(i, "расшифровка готова")
         self.icon.notify("Расшифровка встречи готова. Выжимка — кнопкой «Скопировать для выжимки».", "Notetaker")
@@ -693,15 +757,24 @@ class App:
     # --- запуск ---
 
     def listen(self):
-        """Повторный запуск ярлыка не открывает второй Notetaker, а показывает окно этого."""
+        """Повторный запуск ярлыка не открывает второй Notetaker, а показывает окно этого.
+        Если запустили с файлами («Открыть с помощью», файл брошен на ярлык) — пути приходят сюда, по строке на файл."""
         import socket
         s = socket.socket()
         s.bind(("127.0.0.1", PORT))
         s.listen()
         while True:
             c, _ = s.accept()
+            data = b""
+            c.settimeout(2)
+            try:
+                while chunk := c.recv(65536):
+                    data += chunk
+            except OSError:
+                pass
             c.close()
-            self.root.after(0, self.open_window)
+            paths = [x for x in data.decode("utf-8", "replace").splitlines() if x.strip()]
+            self.root.after(0, lambda p=paths: self.import_files(p) if p else self.open_window())
 
     def quit(self):
         if self.state == "recording":
@@ -718,7 +791,7 @@ class App:
         for i, h in enumerate(self.history):
             if not (h["status"].endswith("…") or h["status"].startswith("в очереди")):
                 continue
-            if has_audio(h["folder"]):
+            if self.audio_there(h):
                 self.mark(i, "в очереди")
                 self.jobs.put(i)
             else:
@@ -747,6 +820,8 @@ class App:
         self.build()
         for target in (self.watch, self.worker, self.listen):
             threading.Thread(target=target, daemon=True).start()
+        if self.files:
+            self.import_files(self.files)
         self.icon.run_detached()
         self.root.mainloop()
 
@@ -876,6 +951,7 @@ def start_menu_shortcut():
 
 def main():
     ap = argparse.ArgumentParser(prog="Notetaker")
+    ap.add_argument("files", nargs="*", help="записи на расшифровку (m4a, mp3, mp4…)")
     ap.add_argument("--hidden", action="store_true", help="стартовать без окна, только значок (автозапуск)")
     ap.add_argument("--version", action="version", version=__version__)
     ap.add_argument("--transcribe", nargs=2, metavar=("ЗАПИСЬ", "ВЫХОД.md"),
@@ -898,13 +974,16 @@ def main():
     if ctypes.windll.kernel32.GetLastError() == 183:  # уже запущен — показать его окно
         import socket
         try:
-            socket.create_connection(("127.0.0.1", PORT), timeout=2).close()
+            with socket.create_connection(("127.0.0.1", PORT), timeout=2) as c:
+                c.sendall("\n".join(os.path.abspath(f) for f in args.files).encode("utf-8"))
         except OSError:
             ctypes.windll.user32.MessageBoxW(None, "Notetaker уже запущен, но не отвечает. Закройте его через значок "
                                              "в трее (правая кнопка → Выход) или перезагрузите компьютер.", "Notetaker", 0x30)
         return
     try:
-        App(hidden=args.hidden).run()
+        app = App(hidden=args.hidden and not args.files)
+        app.files = args.files
+        app.run()
     except Exception as e:
         log(f"сбой: {e!r}")
         ctypes.windll.user32.MessageBoxW(None, f"Notetaker не запустился: {e}\nЖурнал: {LOG}", "Notetaker", 0x10)

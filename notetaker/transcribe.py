@@ -19,9 +19,44 @@ VOICE_SHORT = 0.4  # реплики от 0,4 до 1,5 с относятся к �
 MY_SAME = 0.5  # похожесть на отпечаток, с которой голос в микрофоне считается «Я»
 
 
+def decode(path, rate):
+    """Любой аудио- или видеофайл (m4a, mp3, mp4…) → куски float32 стерео (N, 2) с частотой rate. Через FFmpeg (PyAV)."""
+    import av
+    with av.open(path) as f:
+        stream = next((s for s in f.streams if s.type == "audio"), None)
+        if stream is None:
+            raise RuntimeError("в файле нет звука")
+        res = av.AudioResampler(format="flt", layout="stereo", rate=rate)
+        for frame in f.decode(stream):
+            for out in res.resample(frame):
+                yield out.to_ndarray().reshape(-1, 2)
+        for out in res.resample(None):
+            yield out.to_ndarray().reshape(-1, 2)
+
+
+def convert(src, dst):
+    """Файл пользователя → встреча.ogg (Opus 48 кГц) рядом с расшифровкой. Возвращает длительность, с."""
+    import soundfile as sf
+    n, tmp = 0, dst + ".part"
+    with sf.SoundFile(tmp, "w", samplerate=48000, channels=2, format="OGG", subtype="OPUS") as o:
+        for block in decode(src, 48000):
+            o.write(block)
+            n += len(block)
+    if not n:
+        os.remove(tmp)
+        raise RuntimeError("в файле нет звука")
+    os.replace(tmp, dst)
+    return n / 48000
+
+
 def read_audio(path):
     """Стерео 16 кГц float32 в диапазоне −1…1, форма (N, 2)."""
     import soundfile as sf
+    try:
+        sf.info(path)
+    except Exception:  # не ogg/wav/flac — через FFmpeg
+        parts = list(decode(path, 16000))
+        return np.concatenate(parts).astype(np.float32) if parts else np.zeros((0, 2), dtype=np.float32)
     parts = []
     with sf.SoundFile(path) as f:  # по минуте: часовая встреча в 48 кГц целиком — это 1,6 ГБ памяти
         rate = f.samplerate
@@ -175,8 +210,24 @@ def asr():
     return _model
 
 
-def transcribe(src, out, title, progress=lambda text: None):
-    """Расшифровать запись src в файл out (Markdown). progress — строка хода для окна."""
+def label_voices(x, segs):
+    """Файл не из Notetaker: каналы не значат «я / собеседники», голоса различаем только по звучанию — «Спикер N»."""
+    import sherpa_onnx
+    if not os.path.exists(VOICE_MODEL) or not segs:
+        return ["Спикер 1"] * len(segs)
+    ext = sherpa_onnx.SpeakerEmbeddingExtractor(sherpa_onnx.SpeakerEmbeddingExtractorConfig(model=VOICE_MODEL, num_threads=4))
+    idx = list(range(len(segs)))
+    voice, _ = voice_groups(ext, x.mean(axis=1), segs, idx)
+    out, order, last = [], {}, 0
+    for i in idx:
+        v = last = voice.get(i, last)
+        out.append(f"Спикер {order.setdefault(v, len(order) + 1)}")
+    return out
+
+
+def transcribe(src, out, title, progress=lambda text: None, channels=True):
+    """Расшифровать запись src в файл out (Markdown). progress — строка хода для окна.
+    channels — запись Notetaker'а (левый канал — я, правый — собеседники); False — файл пользователя."""
     progress("готовлю звук")
     x = read_audio(src)
     dur = len(x) / 16000
@@ -191,8 +242,11 @@ def transcribe(src, out, title, progress=lambda text: None):
             shown = pct
             progress(f"расшифровка {pct}%")
     progress("различаю голоса")
-    rms = speaker_levels(x)
-    labels = number_voices(x, segs, [who(rms, s, e) for s, e, _ in segs])
+    if channels:
+        rms = speaker_levels(x)
+        labels = number_voices(x, segs, [who(rms, s, e) for s, e, _ in segs])
+    else:
+        labels = label_voices(x, segs)
     lines = []
     for (start, end, text), label in zip(segs, labels):
         m, sec = divmod(int(start), 60)
@@ -201,7 +255,9 @@ def transcribe(src, out, title, progress=lambda text: None):
         lines.append(f"[{stamp}] {label}: {text}")
     with open(out, "w", encoding="utf-8") as f:
         f.write(f"# Расшифровка: {title}\n\n")
-        f.write("Автоматическая расшифровка. «Я», «В комнате N» и «Собеседник N» — по каналам записи и голосу, "
-                "могут ошибаться на перебивках; возможны ошибки в именах и терминах.\n\n")
+        who_text = ("«Я», «В комнате N» и «Собеседник N» — по каналам записи и голосу" if channels
+                    else "«Спикер N» — по звучанию голоса")
+        f.write(f"Автоматическая расшифровка. {who_text}, могут ошибаться на перебивках; "
+                "возможны ошибки в именах и терминах.\n\n")
         f.write("\n".join(lines) + "\n")
     return dur
