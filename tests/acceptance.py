@@ -181,6 +181,7 @@ def t_auto_stop(app):
 
 @case(3, "голосовое в мессенджере — не встреча: ни уведомлений, ни записи")
 def t_voice_note(app):
+    wait(lambda: not app.processing and not app.jobs.qsize(), 30, "конца обработки прошлых встреч")
     n_before, before = len(os.listdir(n.MEETINGS_DIR)), len(app.history)
     app.icon.notes.clear()
     call("telegram.exe", "Telegram", 2)  # держит микрофон, пока надиктовывают голосовое
@@ -311,6 +312,7 @@ def t_hop(app):
     hang_up("teams.exe")
     wait(lambda: app.state == "idle", 5, "остановки после последней встречи")
     wait(lambda: len(app.history) == before + 1, 3, "одной встречи в списке")
+    wait(lambda: ui(app, lambda: app.tree.get_children()[0]) == str(len(app.history) - 1), 2, "новой встречи сверху списка")
     time.sleep(1.5)
     check(app.state == "idle", "после конца встреч запись началась снова")
 
@@ -430,6 +432,9 @@ def recovery_case():
         wait(lambda: find("05.01 10:00")["status"] == "расшифровка готова", 20, "обработки брошенной записи")
         wait(lambda: find("05.01 11:00")["status"] == "расшифровка готова", 20, "расшифровки прерванной записи")
         check(find("05.01 09:00")["status"].startswith("прервано"), "запись без звука не помечена «прервано»")
+        rows = ui(app, lambda: list(app.tree.get_children()))
+        check(rows == [str(i) for i in reversed(range(len(app.history)))],
+              f"после перезапуска свежие встречи не сверху: {rows}")
         stop_app(app)
         results.append((10, title, True, "", time.time() - t0))
     except Exception as e:

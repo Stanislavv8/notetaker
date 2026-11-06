@@ -15,7 +15,7 @@ import argparse, ctypes, datetime, functools, json, os, queue, shutil, subproces
 
 from .paths import APP_DIR, BUNDLE_DIR, DATA_DIR, FROZEN, MEETINGS_DIR
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 LOG, HISTORY, SETTINGS = (os.path.join(DATA_DIR, f) for f in ("notetaker.log", "history.json", "settings.json"))
 STARTUP_LNK = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs\Startup", "Notetaker.lnk")
 START_MENU_LNK = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs", "Notetaker.lnk")
@@ -400,12 +400,15 @@ class App:
         self.flash_lbl.config(text=self.flash[0] if time.time() < self.flash[1] else "")
         if self.shown_history != repr(self.history):
             self.shown_history = repr(self.history)
-            for i, h in reversed(list(enumerate(self.history))):  # обновляем строки на месте: выделение не сбрасывается
+            # сверху всегда самая свежая встреча; строки обновляем на месте и двигаем — выделение не сбрасывается
+            # (раньше при запуске новые вставлялись по одной в начало, и после перезапуска свежие оказывались внизу)
+            for pos, (i, h) in enumerate(reversed(list(enumerate(self.history)))):
                 values = (h["when"], f"{h['mins']} мин", h["status"])
                 if self.tree.exists(str(i)):
                     self.tree.item(str(i), values=values)
                 else:
-                    self.tree.insert("", 0, iid=str(i), values=values)
+                    self.tree.insert("", "end", iid=str(i), values=values)
+                self.tree.move(str(i), "", pos)
         self.refresh_sound()
         self.root.after(300, self.refresh)
 
@@ -649,8 +652,8 @@ class App:
                     self.finish("микрофон отпущен", released)
                 elif now - self.rec.last_sound >= SILENCE_STOP:
                     self.finish("тишина")
-                elif not self.announced and (datetime.datetime.now() - self.started).total_seconds() >= MIN_LEN:
-                    self.announce()  # дольше минуты — это встреча, а не голосовое
+                elif not self.announced and not released and (datetime.datetime.now() - self.started).total_seconds() >= MIN_LEN:
+                    self.announce()  # микрофон занят дольше минуты — это встреча, а не голосовое (ожидание после отпускания не в счёт)
                 if self.state == "idle":
                     released = None
 
