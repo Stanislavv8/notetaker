@@ -16,7 +16,10 @@
 | pystray | значок в трее | LGPL-3.0 | https://github.com/moses-palmer/pystray |
 | NumPy | вычисления | BSD-3-Clause | https://numpy.org |
 | Pillow | значок | MIT-CMU | https://python-pillow.org |
-| pywin32 | ярлыки Windows | PSF | https://github.com/mhammond/pywin32 |
+| sv-ttk (Sun Valley) | оформление окна в стиле Windows 11 | MIT | https://github.com/rdbende/Sun-Valley-ttk-theme |
+| pymorphy3, словари OpenCorpora | начальная форма слов для тем встречи | MIT; словари — CC BY-SA 3.0 | https://github.com/no-plagiarism/pymorphy3, https://opencorpora.org |
+| wordfreq (список частотности слов, `notetaker/ru_freq.txt.gz`) | темы встречи: что звучит чаще обычного | данные CC BY-SA 4.0 | https://github.com/rspeer/wordfreq |
+| pywin32 | ярлыки Windows, название встречи из календаря Outlook | PSF | https://github.com/mhammond/pywin32 |
 | Python | среда выполнения | PSF | https://www.python.org |
 
 Для библиотек под LGPL и GPL (FFmpeg и его кодеки, libsndfile, pystray): исходный код Notetaker открыт, сборка воспроизводится скриптом

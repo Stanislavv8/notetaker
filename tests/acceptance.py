@@ -23,6 +23,8 @@
     где нужны; «Скопировать для выжимки» кладёт в буфер промт и расшифровку.
 15. Флажок автозапуска создаёт и удаляет ярлык.
 16. Смена устройства в момент остановки записи не ломает звук для следующих записей.
+19. Название встречи — из календаря (Outlook подменён), без календаря — по приложению; «О чём» — темы из
+    расшифровки; «Переименовать» меняет название в списке и в заголовке расшифровки.
 18. Файл на расшифровку (m4a, mp3, mp4, wav): кнопкой и запуском программы с файлом; исходник цел; голоса —
     «Спикер N», а не по каналам; «Расшифровать заново» работает; битый файл → понятная ошибка.
 """
@@ -59,9 +61,13 @@ def fake_transcription(src, out, title, progress, channels=True):
         raise RuntimeError("сбой модели")
     with open(out, "w", encoding="utf-8") as f:
         f.write(f"# Расшифровка: {title}\n\n[00:00] Я: проверка\n")
+        for k in range(3):
+            f.write(f"[00:0{k + 1}] Собеседник 1: вебинар по ITSM, потом рассылка и вебинар, рассылка по ITSM\n")
 
 
 n.run_transcription = fake_transcription
+calendar = []  # что «стоит в календаре Outlook» во время записи
+n.calendar_subject = lambda start, end: calendar[0] if calendar else None
 real_mark = n.App.mark
 
 
@@ -439,6 +445,40 @@ def t_import(app):
     wait(lambda: app.history[-1]["status"].startswith("ошибка"), 20, "ошибки на битом файле")
 
 
+@case(19, "название из календаря, темы «О чём», переименование")
+def t_title(app):
+    calendar.append("Планёрка маркетинга")
+    i = len(app.history)
+    try:
+        ui(app, app.main_action)
+        wait(lambda: app.state == "recording", 3, "старта")
+        time.sleep(2.5)
+        ui(app, app.main_action)
+        wait(lambda: len(app.history) > i and app.history[i]["status"] == n.DONE, 30, "расшифровки")
+    finally:
+        calendar.clear()
+    h = app.history[i]
+    check(n.split_when(h)[1] == "Планёрка маркетинга", f"название не из календаря: {n.split_when(h)}")
+    check({"вебинар", "ITSM", "рассылка"} <= set(h.get("topics") or []), f"темы не нашлись: {h.get('topics')}")
+    wait(lambda: ui(app, lambda: app.tree.exists(str(i)) and "вебинар" in app.tree.item(str(i), "values")[3]), 2,
+         "тем в колонке «О чём»")
+    path = os.path.join(h["folder"], n.TRANSCRIPT)
+    check(open(path, encoding="utf-8").readline().startswith("# Расшифровка: Планёрка маркетинга — "),
+          "в заголовке расшифровки нет названия")
+    select(app, i)
+    import tkinter.simpledialog as sd
+    real, sd.askstring = sd.askstring, lambda *a, **k: "Итоги недели"
+    try:
+        ui(app, app.rename)
+    finally:
+        sd.askstring = real
+    wait(lambda: ui(app, lambda: app.tree.item(str(i), "values"))[1] == "Итоги недели", 2, "нового названия в списке")
+    check(open(path, encoding="utf-8").readline().startswith("# Расшифровка: Итоги недели — "),
+          "переименование не дошло до расшифровки")
+    manual = [x for x in app.history if "вручную" in x["when"] and not x.get("title") and not x.get("name")]
+    check(not manual or n.split_when(manual[0])[1] == "Запись вручную", "без календаря название не по приложению")
+
+
 @case(15, "флажок автозапуска")
 def t_startup(app):
     ui(app, lambda: (app.startup_var.set(True), app.toggle_startup()))
@@ -539,7 +579,7 @@ def stop_app(app):
 
 def run_all():
     cases = [t_auto_start, t_auto_stop, t_voice_note, t_cancel_recording, t_short, t_manual, t_switch,
-             t_switch_sync, t_switch_at_stop, t_hop, t_auto_off, t_meters, t_second_instance, t_processing, t_import, t_startup,
+             t_switch_sync, t_switch_at_stop, t_hop, t_auto_off, t_meters, t_second_instance, t_processing, t_title, t_import, t_startup,
              t_quit_recording]
     app = start_app()
     for c in cases:

@@ -15,7 +15,7 @@ import argparse, ctypes, datetime, functools, json, os, queue, shutil, subproces
 
 from .paths import APP_DIR, BUNDLE_DIR, DATA_DIR, FROZEN, MEETINGS_DIR
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 LOG, HISTORY, SETTINGS = (os.path.join(DATA_DIR, f) for f in ("notetaker.log", "history.json", "settings.json"))
 STARTUP_LNK = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs\Startup", "Notetaker.lnk")
 START_MENU_LNK = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs", "Notetaker.lnk")
@@ -261,6 +261,90 @@ def convert_file(src, dst):
 
 FILE_TYPES = ("*.m4a *.mp3 *.wav *.ogg *.opus *.oga *.flac *.aac *.wma *.amr *.3gp "
               "*.mp4 *.mov *.mkv *.webm *.avi *.wmv")
+DONE = "расшифровка готова"
+
+# --- оформление: светлая тема Windows 11 (sv-ttk), компоновка окна прежняя ---
+BG, TRACK, STRIPE = "#fafafa", "#e6e6e6", "#f3f3f3"
+MUTED, WORK, ERROR, OK = "#6b6b6b", "#9a6700", "#c42b1c", "#0f7b0f"
+
+
+def theme(root, k):
+    from tkinter import font, ttk
+    try:
+        import sv_ttk
+        sv_ttk.set_theme("light", root)
+        # шрифты темы заданы в пикселях и не растут с масштабом экрана — переводим в пункты, как у Windows
+        for name in font.names(root):
+            f = font.nametofont(name, root)
+            if name.startswith("SunValley") and int(f.cget("size")) < 0:
+                f.configure(size=round(-int(f.cget("size")) * 0.75))
+    except Exception as e:  # без темы окно всё равно работает, просто выглядит по-старому
+        log(f"тема: {e!r}")
+    style = ttk.Style(root)
+    root.configure(bg=BG)
+    style.configure("Big.TLabel", font=("Segoe UI Semibold", 15))
+    style.configure("Head.TLabel", font=("Segoe UI Semibold", 10))
+    style.configure("Muted.TLabel", foreground=MUTED)
+    style.map("Muted.TLabel", foreground=[("!disabled", MUTED)])
+    style.configure("Done.TLabel", foreground=OK)
+    style.configure("Treeview", rowheight=int(28 * k))
+    style.configure("Treeview.Heading", font=("Segoe UI Semibold", 9))
+    return style
+
+
+# Как показать приложение, которое взяло микрофон (имя процесса из реестра Windows)
+APP_NAMES = {"ms-teams": "Teams", "teams": "Teams", "zoom": "Zoom", "telemost": "Телемост", "skype": "Skype",
+             "chrome": "звонок в браузере", "msedge": "звонок в браузере", "firefox": "звонок в браузере",
+             "browser": "звонок в браузере", "opera": "звонок в браузере", "yandex": "звонок в браузере",
+             "telegram": "Telegram", "whatsapp": "WhatsApp", "discord": "Discord", "slack": "Slack",
+             "вручную": "запись вручную", "восстановлена": "восстановленная запись"}
+
+
+def split_when(h):
+    """Строка истории → («10.11 10:00», название встречи). Название: своё → из календаря или файла → по приложению."""
+    when, _, app_name = h["when"].partition(" · ")
+    title = h.get("name") or h.get("title")
+    if not title:
+        app_name = app_name.strip()
+        pretty = APP_NAMES.get(app_name.lower(), app_name)
+        title = pretty[:1].upper() + pretty[1:] if pretty else "Встреча"
+    return when, title
+
+
+def header(h):
+    """Заголовок расшифровки: «Daily marketing — 10.11 10:00»."""
+    when, title = split_when(h)
+    return f"{title} — {when}"
+
+
+def retitle(path, h):
+    """Новое название — и в первой строке готовой расшифровки."""
+    if not path:
+        return
+    try:
+        with open(path, encoding="utf-8") as f:
+            lines = f.read().split("\n")
+        if lines and lines[0].startswith("# Расшифровка:"):
+            lines[0] = f"# Расшифровка: {header(h)}"
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("\n".join(lines))
+    except OSError as e:
+        log(f"переименование: {e!r}")
+
+
+def calendar_subject(start, end):
+    from . import outlook
+    title = outlook.subject(start, end)
+    log(f"календарь: {'нашёл встречу' if title else 'встречи нет'}")
+    return title
+
+
+def meeting_topics(path):
+    from . import topics
+    t0 = time.time()
+    found = topics.topics(path)
+    log(f"темы: {len(found)} за {time.time() - t0:.1f} с")
+    return found
 
 
 class App:
@@ -304,29 +388,27 @@ class App:
         r = self.root
         r.title("Notetaker")
         k = r.winfo_fpixels("1i") / 96  # масштаб экрана Windows
-        r.geometry(f"{int(640 * k)}x{int(700 * k)}")
-        r.minsize(int(560 * k), int(600 * k))
+        r.geometry(f"{int(760 * k)}x{int(660 * k)}")
+        r.minsize(int(620 * k), int(600 * k))
         r.iconbitmap(default=icon_file())
         for c in ("grey", "yellow", "red"):  # значки трея — заранее, чтобы смена состояния не ждала рисования
             picture(c)
         r.protocol("WM_DELETE_WINDOW", r.withdraw)  # крестик прячет окно, Notetaker продолжает работать
-        style = ttk.Style()
-        style.configure("Big.TLabel", font=("Segoe UI", 14))
-        style.configure("Treeview", rowheight=int(26 * k))
-        pad = {"padx": 16, "pady": (12, 0)}
+        style = theme(r, k)
+        pad = {"padx": 20, "pady": (14, 0)}
 
         top = ttk.Frame(r)
-        top.pack(fill="x", **pad)
-        self.dot = tk.Canvas(top, width=18, height=18, highlightthickness=0)
-        self.dot.pack(side="left", padx=(0, 8))
+        top.pack(fill="x", padx=20, pady=(18, 0))
+        self.dot = tk.Canvas(top, width=int(16 * k), height=int(16 * k), highlightthickness=0, bg=BG)
+        self.dot.pack(side="left", padx=(0, int(10 * k)))
         self.status_lbl = ttk.Label(top, style="Big.TLabel")
         self.status_lbl.pack(side="left")
-        self.sub_lbl = ttk.Label(r, foreground="#666")
-        self.sub_lbl.pack(anchor="w", padx=16)
+        self.sub_lbl = ttk.Label(r, style="Muted.TLabel", foreground=MUTED)
+        self.sub_lbl.pack(anchor="w", padx=(20 + int(26 * k), 20))
 
         btns = ttk.Frame(r)
         btns.pack(fill="x", **pad)
-        self.main_btn = ttk.Button(btns, command=self.main_action)
+        self.main_btn = ttk.Button(btns, command=self.main_action, style="Accent.TButton")
         self.main_btn.pack(side="left")
         self.file_btn = ttk.Button(btns, text="Расшифровать файл…", command=self.pick_files)
         self.file_btn.pack(side="right")
@@ -343,9 +425,9 @@ class App:
             box = ttk.Combobox(sound, textvariable=var, state="readonly", postcommand=lambda t=track: self.fill_devices(t))
             box.grid(row=track * 2, column=1, sticky="ew", padx=8, pady=(6, 0))
             box.bind("<<ComboboxSelected>>", lambda e, t=track: self.pick_device(t))
-            bar = tk.Canvas(sound, width=int(120 * k), height=int(12 * k), highlightthickness=0, bg="#e4e4e4")
+            bar = tk.Canvas(sound, width=int(120 * k), height=int(8 * k), highlightthickness=0, bg=TRACK)
             bar.grid(row=track * 2, column=2, padx=8, pady=(6, 0))
-            note = ttk.Label(sound, foreground="#666")
+            note = ttk.Label(sound, style="Muted.TLabel")
             note.grid(row=track * 2 + 1, column=1, columnspan=2, sticky="w", padx=8, pady=(0, 4))
             self.dev_vars.append(var), self.dev_boxes.append(box), self.bars.append(bar), self.dev_notes.append(note)
             self.bar_fill.append(bar.create_rectangle(0, 0, 0, 0, outline=""))
@@ -359,27 +441,40 @@ class App:
         ttk.Checkbutton(opts, text="Запускать при входе в Windows", variable=self.startup_var,
                         command=self.toggle_startup).pack(anchor="w")
 
-        ttk.Label(r, text="Встречи").pack(anchor="w", padx=16, pady=(16, 4))
+        ttk.Label(r, text="Встречи", style="Head.TLabel").pack(anchor="w", padx=20, pady=(18, 6))
         frame = ttk.Frame(r)
-        frame.pack(fill="both", expand=True, padx=16)
-        self.tree = ttk.Treeview(frame, columns=("when", "len", "status"), show="headings", height=8)
-        for col, title, w in (("when", "Когда", 180), ("len", "Длина", 70), ("status", "Что готово", 240)):
+        frame.pack(fill="both", expand=True, padx=20)
+        self.tree = ttk.Treeview(frame, columns=("when", "title", "len", "about"), show="headings", height=8)
+        for col, title, w in (("when", "Когда", 95), ("title", "Встреча", 200), ("len", "Длина", 60),
+                              ("about", "О чём", 300)):
             self.tree.heading(col, text=title, anchor="w")
-            self.tree.column(col, width=int(w * k), anchor="w", stretch=col == "status")
+            self.tree.column(col, width=int(w * k), minwidth=int(50 * k), anchor="w",
+                             stretch=col in ("title", "about"))
+        self.tree.tag_configure("work", foreground=WORK)
+        self.tree.tag_configure("error", foreground=ERROR)
         self.tree.pack(side="left", fill="both", expand=True)
         sb = ttk.Scrollbar(frame, command=self.tree.yview)
         sb.pack(side="right", fill="y")
         self.tree.configure(yscrollcommand=sb.set)
         self.tree.bind("<Double-1>", lambda e: self.open_selected())
+        self.tree.bind("<F2>", lambda e: self.rename())
+        self.tree.bind("<Button-3>", self.context_menu)
+        self.menu = tk.Menu(r, tearoff=0)
+        for label, cmd in (("Открыть расшифровку", self.open_selected), ("Скопировать для выжимки", self.copy_for_summary),
+                           ("Переименовать…", self.rename), ("Показать в папке", self.show_in_folder),
+                           ("Расшифровать заново", self.retranscribe)):
+            self.menu.add_command(label=label, command=cmd)
 
-        self.flash_lbl = ttk.Label(r, foreground="#2e7d32")
-        self.flash_lbl.pack(anchor="w", padx=16, pady=(6, 0))
+        self.flash_lbl = ttk.Label(r, style="Done.TLabel")
+        self.flash_lbl.pack(anchor="w", padx=20, pady=(6, 0))
         bottom = ttk.Frame(r)
-        bottom.pack(fill="x", padx=16, pady=(6, 12))
+        bottom.pack(fill="x", padx=20, pady=(6, 16))
         self.open_btn = ttk.Button(bottom, text="Открыть", command=self.open_selected)
         self.open_btn.pack(side="left")
         self.copy_btn = ttk.Button(bottom, text="Скопировать для выжимки", command=self.copy_for_summary)
         self.copy_btn.pack(side="left", padx=(8, 0))
+        self.rename_btn = ttk.Button(bottom, text="Переименовать", command=self.rename)
+        self.rename_btn.pack(side="left", padx=(8, 0))
         self.retry_btn = ttk.Button(bottom, text="Расшифровать заново", command=self.retranscribe)
         self.retry_btn.pack(side="left", padx=(8, 0))
         ttk.Button(bottom, text="Папка встреч", command=self.open_folder).pack(side="left", padx=8)
@@ -392,7 +487,7 @@ class App:
 
     def refresh(self):
         color, text, sub = {
-            "idle": ("#999", "Жду звонка", "Запишу, когда приложение возьмёт микрофон" if self.settings["auto"]
+            "idle": ("#9aa0a6", "Жду звонка", "Запишу, когда приложение возьмёт микрофон" if self.settings["auto"]
                      else "Автозапись выключена — начните запись кнопкой"),
             "countdown": ("#e6a800", f"Сейчас начну запись: {self.app_name}", "Не нужно — нажмите «Не записывать»"),
             "recording": ("#dc2828", f"Пишу: {self.app_name}", ""),
@@ -405,7 +500,8 @@ class App:
         if self.jobs.qsize() or self.processing:
             sub += ("; " if sub else "") + "расшифровываю прошлую встречу"
         self.dot.delete("all")
-        self.dot.create_oval(2, 2, 16, 16, fill=color, outline="")
+        d = int(self.dot["width"])
+        self.dot.create_oval(1, 1, d - 1, d - 1, fill=color, outline="")
         self.status_lbl.config(text=text)
         self.sub_lbl.config(text=sub)
         self.main_btn.config(text="Остановить и расшифровать" if self.state == "recording" else "Начать запись",
@@ -418,6 +514,7 @@ class App:
         has_text = self.transcript(i) is not None
         self.open_btn.config(state="normal" if i is not None else "disabled")
         self.copy_btn.config(state="normal" if has_text else "disabled")
+        self.rename_btn.config(state="normal" if i is not None else "disabled")
         self.retry_btn.config(state="normal" if self.can_retranscribe(i) else "disabled")
         self.flash_lbl.config(text=self.flash[0] if time.time() < self.flash[1] else "")
         if self.shown_history != repr(self.history):
@@ -425,11 +522,17 @@ class App:
             # сверху всегда самая свежая встреча; строки обновляем на месте и двигаем — выделение не сбрасывается
             # (раньше при запуске новые вставлялись по одной в начало, и после перезапуска свежие оказывались внизу)
             for pos, (i, h) in enumerate(reversed(list(enumerate(self.history)))):
-                values = (h["when"], f"{h['mins']} мин" if h.get("mins") is not None else "—", h["status"])
+                when, title = split_when(h)
+                done = h["status"] == DONE
+                about = ", ".join(h.get("topics") or []) or DONE if done else h["status"]
+                values = (when, title, f"{h['mins']} мин" if h.get("mins") is not None else "—", about)
+                tags = []
+                if not done:
+                    tags.append("error" if h["status"].startswith(("ошибка", "прервано")) else "work")
                 if self.tree.exists(str(i)):
-                    self.tree.item(str(i), values=values)
+                    self.tree.item(str(i), values=values, tags=tags)
                 else:
-                    self.tree.insert("", "end", iid=str(i), values=values)
+                    self.tree.insert("", "end", iid=str(i), values=values, tags=tags)
                 self.tree.move(str(i), "", pos)
         self.refresh_sound()
         self.root.after(300, self.refresh)
@@ -443,7 +546,7 @@ class App:
             bar = self.bars[t]
             w, h = bar.winfo_width(), bar.winfo_height()
             bar.coords(self.bar_fill[t], 0, 0, int(w * shown), h)
-            bar.itemconfig(self.bar_fill[t], fill="#2e9d4f" if shown > 0.25 else "#9ab")
+            bar.itemconfig(self.bar_fill[t], fill="#2e9d4f" if shown > 0.25 else "#a8b3bf")
         self.root.after(33, self.draw_meters)
 
     def stop_monitor(self):
@@ -468,15 +571,15 @@ class App:
         now = time.time()
         for t in range(2):
             if not cap:
-                note, color = "шкала оживёт, когда окно открыто или идёт запись", "#666"
+                note, color = "шкала оживёт, когда окно открыто или идёт запись", MUTED
             else:
-                note, color = f"сейчас: {cap.devices[t]}", "#666"
+                note, color = f"сейчас: {cap.devices[t]}", MUTED
                 other = cap.heard[1 - t]
                 if t == 0 and now - cap.alive[0] > 3:
-                    note, color = "сигнала нет совсем: выключен кнопкой на гарнитуре или занят — выберите другой", "#c22"
+                    note, color = "сигнала нет совсем: выключен кнопкой на гарнитуре или занят — выберите другой", ERROR
                 elif self.state == "recording" and now - cap.heard[t] > QUIET_WARN and now - other < QUIET_WARN:
                     note, color = (f"тишина {int(now - cap.heard[t]) // 60 or 1} мин — проверьте устройство "
-                                   f"({cap.devices[t]})"), "#c22"
+                                   f"({cap.devices[t]})"), ERROR
             self.dev_notes[t].config(text=note, foreground=color)
 
     def fill_devices(self, track):
@@ -498,7 +601,7 @@ class App:
                 log(f"устройство {'микрофона' if track == 0 else 'звука'}: {cap.devices[track]}")
             except Exception as e:
                 log(f"смена устройства: {e!r}")
-                self.dev_notes[track].config(text=f"не смог переключить: {e}", foreground="#c22")
+                self.dev_notes[track].config(text=f"не смог переключить: {e}", foreground=ERROR)
 
     def open_window(self):
         self.root.deiconify()
@@ -537,6 +640,38 @@ class App:
     def open_folder(self):
         os.makedirs(MEETINGS_DIR, exist_ok=True)
         os.startfile(MEETINGS_DIR)
+
+    def show_in_folder(self):
+        i = self.selected()
+        if i is not None and os.path.isdir(self.history[i]["folder"]):
+            os.startfile(self.history[i]["folder"])
+
+    def context_menu(self, event):
+        row = self.tree.identify_row(event.y)
+        if not row:
+            return
+        self.tree.selection_set(row)
+        i = int(row)
+        for label, ok in (("Открыть расшифровку", True), ("Скопировать для выжимки", self.transcript(i) is not None),
+                          ("Расшифровать заново", self.can_retranscribe(i))):
+            self.menu.entryconfig(label, state="normal" if ok else "disabled")
+        self.menu.tk_popup(event.x_root, event.y_root)
+
+    def rename(self):
+        """Своё название встречи: в списке и в заголовке расшифровки. Пустое — вернуть название из календаря."""
+        from tkinter import simpledialog
+        i = self.selected()
+        if i is None:
+            return
+        h = self.history[i]
+        name = simpledialog.askstring("Переименовать встречу", "Название встречи:", parent=self.root,
+                                      initialvalue=split_when(h)[1])
+        if name is None:
+            return
+        with self.finishing:
+            h["name"] = name.strip() or None
+            save_json(HISTORY, self.history)
+        retitle(self.transcript(i), h)
 
     def copy_for_summary(self):
         """Расшифровка с готовым промтом — в буфер обмена: вставить в любой чат с нейросетью."""
@@ -635,9 +770,10 @@ class App:
         if cancelled or sec < MIN_LEN:
             shutil.rmtree(folder, ignore_errors=True)
         else:
+            title = calendar_subject(started, started + datetime.timedelta(seconds=sec))
             with self.finishing:
                 self.history.append({"when": f"{started:%d.%m %H:%M} · {app_name}", "mins": round(sec / 60),
-                                     "status": "в очереди", "folder": folder})
+                                     "status": "в очереди", "folder": folder, "title": title})
                 save_json(HISTORY, self.history)
                 self.jobs.put(len(self.history) - 1)
             self.icon.notify(f"Запись остановлена ({round(sec / 60)} мин). Расшифровываю, сообщу, когда будет готово.",
@@ -725,7 +861,7 @@ class App:
             with self.finishing:
                 self.history.append({"when": f"{when:%d.%m %H:%M} · {name[:30]}",
                                      "mins": round(sec / 60) if sec is not None else None, "status": "в очереди",
-                                     "folder": folder, "source": os.path.abspath(path)})
+                                     "folder": folder, "source": os.path.abspath(path), "title": name})
                 save_json(HISTORY, self.history)
                 self.jobs.put(len(self.history) - 1)
             log(f"файл на расшифровку: {path}")
@@ -748,10 +884,12 @@ class App:
         if not os.path.exists(audio):
             raise RuntimeError(f"нет звука в {folder}")
         t0 = time.time()
-        run_transcription(audio, os.path.join(folder, TRANSCRIPT), h["when"], lambda text: self.mark(i, text + "…"),
-                          channels=not h.get("source"))
+        out = os.path.join(folder, TRANSCRIPT)
+        run_transcription(audio, out, header(h), lambda text: self.mark(i, text + "…"), channels=not h.get("source"))
         log(f"расшифровка {h['when']}: {time.time() - t0:.0f} с")
-        self.mark(i, "расшифровка готова")
+        self.mark(i, "ищу темы…")
+        h["topics"] = meeting_topics(out)
+        self.mark(i, DONE)
         self.icon.notify("Расшифровка встречи готова. Выжимка — кнопкой «Скопировать для выжимки».", "Notetaker")
 
     # --- запуск ---
@@ -813,12 +951,21 @@ class App:
             self.jobs.put(len(self.history) - 1)
             log(f"восстановлена брошенная запись: {folder}, {sec / 60:.0f} мин")
 
+    def backfill(self):
+        """Встречам, расшифрованным до версии с темами, — темы один раз в фоне."""
+        for i, h in enumerate(list(self.history)):
+            if h["status"] == DONE and "topics" not in h and (path := self.transcript(i)):
+                found = meeting_topics(path)
+                with self.finishing:
+                    h["topics"] = found
+                    save_json(HISTORY, self.history)
+
     def run(self):
         os.makedirs(MEETINGS_DIR, exist_ok=True)
         self.recover()
         log(f"старт {__version__}; уже держат микрофон: {sorted(v[0] for v in mic_users().values()) or 'никто'}")
         self.build()
-        for target in (self.watch, self.worker, self.listen):
+        for target in (self.watch, self.worker, self.listen, self.backfill):
             threading.Thread(target=target, daemon=True).start()
         if self.files:
             self.import_files(self.files)
@@ -956,7 +1103,14 @@ def main():
     ap.add_argument("--version", action="version", version=__version__)
     ap.add_argument("--transcribe", nargs=2, metavar=("ЗАПИСЬ", "ВЫХОД.md"),
                     help="расшифровать файл и выйти (проверка сборки; ход — в ВЫХОД.md.log)")
+    ap.add_argument("--topics", nargs=2, metavar=("РАСШИФРОВКА.md", "ВЫХОД.txt"),
+                    help="темы встречи в файл и выйти (проверка сборки)")
     args = ap.parse_args()
+    if args.topics:
+        from . import topics
+        with open(args.topics[1], "w", encoding="utf-8") as f:
+            f.write(", ".join(topics.topics(args.topics[0])) + "\n")
+        return
     if args.transcribe:
         src, out = args.transcribe
         with open(out + ".log", "w", encoding="utf-8") as f:

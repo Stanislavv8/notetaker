@@ -5,12 +5,13 @@ from PyInstaller.utils.hooks import collect_all, collect_data_files, collect_dyn
 
 ROOT = os.path.abspath(os.path.join(SPECPATH, ".."))
 datas, binaries, hidden = [], [], ["pystray._win32", "win32timezone"]
-for pkg in ("onnx_asr", "onnxruntime", "sherpa_onnx", "pyaudiowpatch", "_soundfile_data", "av"):
+for pkg in ("onnx_asr", "onnxruntime", "sherpa_onnx", "pyaudiowpatch", "_soundfile_data", "av", "sv_ttk", "pymorphy3", "pymorphy3_dicts_ru"):
     d, b, h = collect_all(pkg)
     datas += d
     binaries += b
     hidden += h
-datas += [(os.path.join(ROOT, "models"), "models"), (os.path.join(SPECPATH, "notetaker.ico"), ".")]
+datas += [(os.path.join(ROOT, "models"), "models"), (os.path.join(SPECPATH, "notetaker.ico"), "."),
+          (os.path.join(ROOT, "notetaker", "ru_freq.txt.gz"), "notetaker")]
 
 a = Analysis([os.path.join(ROOT, "scripts", "launcher.py")], pathex=[ROOT], binaries=binaries, datas=datas,
              hiddenimports=hidden, excludes=["matplotlib", "scipy", "pandas", "IPython", "pytest", "huggingface_hub"])
