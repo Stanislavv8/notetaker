@@ -4,7 +4,7 @@
 - Звонок — когда микрофон взяло любое приложение (Teams, Zoom, Телемост, браузер…). Windows отмечает это в реестре
   CapabilityAccessManager. Запись начинается молча; уведомление — только когда она дольше минуты.
   Так голосовое в мессенджере или диктовка не превращаются во встречу: короче минуты — удаляется без следа.
-  «Не записывать» в трее или в окне — отменить.
+  «Не записывать» в окне или в меню значка (правая кнопка) — отменить; запись длиннее минуты уходит в Корзину.
 - Пишет две дорожки: микрофон (левый канал, «Я») и звук компьютера через WASAPI loopback (правый, «Собеседник»).
   Чтобы loopback не замолкал в тишине, в динамики играет беззвучный поток.
 - Конец — микрофон отпущен 15 с или 5 мин тишины на обеих дорожках. Короче минуты — не сохраняется.
@@ -15,7 +15,7 @@ import argparse, ctypes, datetime, functools, json, os, queue, shutil, subproces
 
 from .paths import APP_DIR, BUNDLE_DIR, DATA_DIR, FROZEN, MEETINGS_DIR
 
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 LOG, HISTORY, SETTINGS = (os.path.join(DATA_DIR, f) for f in ("notetaker.log", "history.json", "settings.json"))
 STARTUP_LNK = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs\Startup", "Notetaker.lnk")
 START_MENU_LNK = os.path.join(os.environ.get("APPDATA", ""), r"Microsoft\Windows\Start Menu\Programs", "Notetaker.lnk")
@@ -112,12 +112,48 @@ class Capture:
         self.alive = [self.t0, self.t0]  # когда в дорожке был хоть какой-то сигнал
         self.lock = threading.Lock()  # только запись в файлы
         self.stopped = False
+        self.names = [mic, speaker]  # что выбрано в настройках (None — устройство Windows по умолчанию)
+        self.tick = [self.t0, self.t0]  # когда обработчик дорожки последний раз получал звук, хоть тишину
         try:
             self.switch(0, mic)
             self.switch(1, speaker)
         except Exception:
             self.stop()
             raise
+        if folder:
+            threading.Thread(target=self._guard, daemon=True).start()
+
+    def _guard(self):
+        """Поток устройства умер молча (подключили гарнитуру, сменилось устройство Windows по умолчанию) —
+        обработчик больше не вызывается, дорожка обрывается. Открываем устройства заново, с новым списком
+        устройств Windows; пропуск writer заполнит тишиной."""
+        while not self.stopped:
+            time.sleep(2)
+            dead = [t for t in range(2) if time.time() - self.tick[t] > 3]
+            if not dead or self.stopped:
+                continue
+            try:
+                with PA_LOCK:
+                    com()
+                    if self.stopped:
+                        return
+                    for s in self.streams + [self.keeper]:
+                        if s:
+                            try:
+                                s.stop_stream(), s.close()
+                            except Exception:
+                                pass
+                    self.streams, self.keeper = [None, None], None
+                    self.p.terminate()
+                    self.p = self.pa.PyAudio()  # заново: PortAudio видит только устройства на момент запуска
+                    self.tick = [time.time()] * 2
+                    self._switch(0, self.names[0])
+                    self._switch(1, self.names[1])
+                log(f"дорожка {'/'.join(('микрофон', 'звук')[t] for t in dead)} замолчала — переоткрыл: "
+                    f"{self.devices[0]} / {self.devices[1]}")
+            except Exception as e:
+                log(f"переоткрыть устройства не вышло: {e!r}")
+                self.tick = [time.time()] * 2  # повторим через несколько секунд
 
     def _find(self, track, name):
         """Устройство WASAPI по имени; нет такого или None — устройство Windows по умолчанию."""
@@ -136,6 +172,7 @@ class Capture:
             com()
             if self.stopped:
                 return
+            self.names[track] = name
             self._switch(track, name)
 
     def _switch(self, track, name):
@@ -164,6 +201,7 @@ class Capture:
             x = np.frombuffer(data, dtype=np.int16).reshape(-1, ch).astype(np.float32).mean(axis=1)
             if rate != RATE:
                 x = np.interp(np.linspace(0, len(x) - 1, round(len(x) * RATE / rate)), np.arange(len(x)), x)
+            self.tick[track] = time.time()
             rms = float(np.sqrt(np.mean(x ** 2))) if len(x) else 0.0
             peak = float(np.abs(x).max()) if len(x) else 0.0
             self.levels[track] = min(1.0, max(0.0, (20 * np.log10(max(peak, 1) / 32768) + 50) / 50))  # −50…0 дБ
@@ -373,8 +411,10 @@ class App:
         self.flash = ("", 0.0)  # короткое сообщение под списком встреч и до какого времени его показывать
         self.root = tk.Tk()
         self.icon = pystray.Icon("notetaker", picture("grey"), "Notetaker", menu=pystray.Menu(
-            pystray.MenuItem(lambda i: "Не записывать эту встречу" if self.active() else "Открыть окно",
-                             lambda: self.root.after(0, self.cancel if self.active() else self.open_window), default=True),
+            # щелчок по значку — всегда окно: если он же отменяет запись, встречу стирают, желая её остановить
+            pystray.MenuItem("Открыть окно", lambda: self.root.after(0, self.open_window), default=True),
+            pystray.MenuItem("Не записывать эту встречу", lambda: self.root.after(0, self.cancel),
+                             visible=lambda i: self.active()),
             pystray.MenuItem("Выход", lambda: self.root.after(0, self.quit))))
 
     def active(self):
@@ -708,6 +748,14 @@ class App:
         self.icon.update_menu()
 
     def cancel(self):
+        if self.state == "recording" and self.started:
+            mins = (datetime.datetime.now() - self.started).total_seconds() / 60
+            if mins >= 1:
+                from tkinter import messagebox
+                if not messagebox.askyesno("Notetaker", f"Записано {mins:.0f} мин. Не расшифровывать эту встречу?\n"
+                                           "Запись уйдёт в Корзину — оттуда её можно вернуть.", icon="warning",
+                                           default="no", parent=self.root):
+                    return
         self.cancelled = True
         if self.state == "recording":
             threading.Thread(target=self.finish, args=("отменено",), daemon=True).start()
@@ -749,7 +797,7 @@ class App:
     def announce(self):
         self.announced = True
         self.icon.notify(f"Пишу встречу ({self.app_name}). " + ("Остановите кнопкой в окне." if self.manual else
-                         "Остановлю сам, когда звонок закончится. Не записывать — щёлкните по значку в трее."),
+                         "Остановлю сам, когда звонок закончится. Не записывать — правой кнопкой по значку в трее."),
                          "Notetaker")
 
     def finish(self, why, until=None):
@@ -767,8 +815,10 @@ class App:
         sec = (datetime.datetime.fromtimestamp(until) if until else datetime.datetime.now()) - started
         sec = sec.total_seconds()
         log(f"стоп ({why}), {sec:.0f} с")
-        if cancelled or sec < MIN_LEN:
+        if sec < MIN_LEN:
             shutil.rmtree(folder, ignore_errors=True)
+        elif cancelled:  # отменённую встречу — в Корзину, а не насовсем: отмену нажимают и по ошибке
+            log(f"в Корзину: {folder}" if to_recycle_bin(folder) else f"в Корзину не вышло, оставил: {folder}")
         else:
             title = calendar_subject(started, started + datetime.timedelta(seconds=sec))
             with self.finishing:
@@ -988,6 +1038,20 @@ def has_tracks(folder):
 def has_audio(folder):
     """Звук записи на месте: сырые дорожки или уже сжатый встреча.ogg."""
     return has_tracks(folder) or os.path.exists(os.path.join(folder, AUDIO))
+
+
+def to_recycle_bin(path):
+    """Папку — в Корзину Windows (SHFileOperationW с FOF_ALLOWUNDO), без окон подтверждения."""
+    from ctypes import wintypes
+
+    class OP(ctypes.Structure):
+        _fields_ = [("hwnd", wintypes.HWND), ("wFunc", wintypes.UINT), ("pFrom", wintypes.LPCWSTR),
+                    ("pTo", wintypes.LPCWSTR), ("fFlags", ctypes.c_ushort), ("aborted", wintypes.BOOL),
+                    ("maps", ctypes.c_void_p), ("title", wintypes.LPCWSTR)]
+    FO_DELETE, FOF_SILENT, FOF_NOCONFIRMATION, FOF_ALLOWUNDO, FOF_NOERRORUI = 3, 4, 0x10, 0x40, 0x400
+    op = OP(None, FO_DELETE, os.path.abspath(path) + "\0", None,
+            FOF_SILENT | FOF_NOCONFIRMATION | FOF_ALLOWUNDO | FOF_NOERRORUI, False, None, None)
+    return ctypes.windll.shell32.SHFileOperationW(ctypes.byref(op)) == 0 and not os.path.exists(path)
 
 
 def unique(path, ext=""):
